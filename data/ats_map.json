@@ -1,0 +1,341 @@
+{
+ "1password": [
+  "ashby"
+ ],
+ "7shifts": [
+  "ashby"
+ ],
+ "affirm": [
+  "greenhouse"
+ ],
+ "agilysys": [
+  "greenhouse"
+ ],
+ "airbnb": [
+  "greenhouse"
+ ],
+ "airtable": [
+  "greenhouse",
+  "ashby"
+ ],
+ "amplitude": [
+  "ashby"
+ ],
+ "angi": [
+  "ashby"
+ ],
+ "apaleo": [
+  "greenhouse"
+ ],
+ "appfolio": [
+  "ashby"
+ ],
+ "asana": [
+  "greenhouse"
+ ],
+ "attentive": [
+  "greenhouse"
+ ],
+ "benchling": [
+  "ashby"
+ ],
+ "boxinc": [
+  "greenhouse"
+ ],
+ "braze": [
+  "greenhouse"
+ ],
+ "breezeway": [
+  "greenhouse"
+ ],
+ "brex": [
+  "greenhouse"
+ ],
+ "buffer": [
+  "ashby"
+ ],
+ "butterflymx": [
+  "ashby"
+ ],
+ "calendly": [
+  "greenhouse"
+ ],
+ "canarytechnologies": [
+  "lever"
+ ],
+ "canva": [
+  "smartrecruiters"
+ ],
+ "carta": [
+  "greenhouse"
+ ],
+ "chime": [
+  "greenhouse"
+ ],
+ "clickup": [
+  "ashby"
+ ],
+ "cloudbeds": [
+  "greenhouse"
+ ],
+ "convene": [
+  "greenhouse"
+ ],
+ "cultureamp": [
+  "greenhouse"
+ ],
+ "deel": [
+  "ashby"
+ ],
+ "dialpad": [
+  "greenhouse"
+ ],
+ "docusign": [
+  "lever"
+ ],
+ "doorloop": [
+  "ashby"
+ ],
+ "drata": [
+  "ashby"
+ ],
+ "dropbox": [
+  "greenhouse"
+ ],
+ "entrata": [
+  "lever"
+ ],
+ "evolvevacationrental": [
+  "greenhouse"
+ ],
+ "figma": [
+  "greenhouse"
+ ],
+ "fiverr": [
+  "smartrecruiters"
+ ],
+ "fleetio": [
+  "greenhouse"
+ ],
+ "frontapp": [
+  "ashby"
+ ],
+ "gainsight": [
+  "ashby",
+  "smartrecruiters"
+ ],
+ "getyourguide": [
+  "greenhouse"
+ ],
+ "gitlab": [
+  "greenhouse"
+ ],
+ "gomotive": [
+  "greenhouse"
+ ],
+ "gong": [
+  "smartrecruiters"
+ ],
+ "gorgias": [
+  "ashby"
+ ],
+ "gusto": [
+  "greenhouse"
+ ],
+ "highspot": [
+  "lever"
+ ],
+ "homebase": [
+  "ashby"
+ ],
+ "hopper": [
+  "ashby"
+ ],
+ "industrious": [
+  "ashby"
+ ],
+ "instawork": [
+  "greenhouse"
+ ],
+ "intercom": [
+  "greenhouse"
+ ],
+ "iterable": [
+  "greenhouse",
+  "ashby"
+ ],
+ "jobber": [
+  "ashby"
+ ],
+ "kasa": [
+  "greenhouse"
+ ],
+ "klaviyo": [
+  "greenhouse",
+  "ashby"
+ ],
+ "kustomer": [
+  "ashby"
+ ],
+ "latch": [
+  "lever",
+  "ashby"
+ ],
+ "lattice": [
+  "greenhouse"
+ ],
+ "lodgify": [
+  "lever"
+ ],
+ "loom": [
+  "ashby"
+ ],
+ "mercury": [
+  "greenhouse",
+  "ashby"
+ ],
+ "mindbody": [
+  "greenhouse"
+ ],
+ "miro": [
+  "ashby"
+ ],
+ "mixpanel": [
+  "greenhouse"
+ ],
+ "notion": [
+  "ashby"
+ ],
+ "nuitee": [
+  "greenhouse"
+ ],
+ "olo": [
+  "lever"
+ ],
+ "outreach": [
+  "lever"
+ ],
+ "pacaso": [
+  "greenhouse"
+ ],
+ "pandadoc": [
+  "greenhouse",
+  "ashby"
+ ],
+ "placemakr": [
+  "lever"
+ ],
+ "plaid": [
+  "ashby"
+ ],
+ "podium": [
+  "ashby"
+ ],
+ "ramp": [
+  "greenhouse",
+  "ashby"
+ ],
+ "remotecom": [
+  "greenhouse"
+ ],
+ "revinate": [
+  "lever",
+  "ashby"
+ ],
+ "roofstock": [
+  "greenhouse"
+ ],
+ "rover": [
+  "lever"
+ ],
+ "salesloft": [
+  "greenhouse"
+ ],
+ "samsara": [
+  "greenhouse"
+ ],
+ "seismic": [
+  "ashby"
+ ],
+ "servicetitan": [
+  "smartrecruiters"
+ ],
+ "shiftsmart": [
+  "ashby"
+ ],
+ "showpad": [
+  "greenhouse"
+ ],
+ "siteminder": [
+  "ashby",
+  "smartrecruiters"
+ ],
+ "smartrent": [
+  "greenhouse"
+ ],
+ "smartsheet": [
+  "greenhouse"
+ ],
+ "sonder": [
+  "ashby"
+ ],
+ "spothero": [
+  "greenhouse",
+  "smartrecruiters"
+ ],
+ "squarespace": [
+  "greenhouse"
+ ],
+ "taskrabbit": [
+  "greenhouse"
+ ],
+ "thumbtack": [
+  "ashby"
+ ],
+ "toast": [
+  "greenhouse"
+ ],
+ "toptal": [
+  "lever"
+ ],
+ "tripadvisor": [
+  "greenhouse"
+ ],
+ "upwork": [
+  "greenhouse"
+ ],
+ "vacasa": [
+  "greenhouse"
+ ],
+ "vanta": [
+  "ashby"
+ ],
+ "veeva": [
+  "lever"
+ ],
+ "webflow": [
+  "greenhouse",
+  "ashby"
+ ],
+ "wework": [
+  "smartrecruiters"
+ ],
+ "wheelhouse": [
+  "greenhouse"
+ ],
+ "wonolo": [
+  "lever"
+ ],
+ "wrike": [
+  "greenhouse"
+ ],
+ "yext": [
+  "greenhouse"
+ ],
+ "zapier": [
+  "ashby"
+ ],
+ "zoominfo": [
+  "greenhouse"
+ ]
+}
