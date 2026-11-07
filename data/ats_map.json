@@ -69,6 +69,9 @@
  "carta": [
   "greenhouse"
  ],
+ "casago": [
+  "greenhouse"
+ ],
  "chime": [
   "greenhouse"
  ],
@@ -76,6 +79,9 @@
   "ashby"
  ],
  "cloudbeds": [
+  "greenhouse"
+ ],
+ "cloudbedsthirdpartyboard": [
   "greenhouse"
  ],
  "convene": [
@@ -151,6 +157,9 @@
  "hopper": [
   "ashby"
  ],
+ "housecallpro": [
+  "bamboohr"
+ ],
  "industrious": [
   "ashby"
  ],
@@ -184,6 +193,9 @@
  "lattice": [
   "greenhouse"
  ],
+ "lifehouse": [
+  "bamboohr"
+ ],
  "lodgify": [
   "lever"
  ],
@@ -193,6 +205,9 @@
  "mercury": [
   "greenhouse",
   "ashby"
+ ],
+ "mewssystems": [
+  "greenhouse"
  ],
  "mindbody": [
   "greenhouse"
@@ -245,8 +260,14 @@
  "roofstock": [
   "greenhouse"
  ],
+ "roompricegenie": [
+  "ashby"
+ ],
  "rover": [
   "lever"
+ ],
+ "sabre": [
+  "bamboohr"
  ],
  "salesloft": [
   "greenhouse"
@@ -334,6 +355,9 @@
  ],
  "zapier": [
   "ashby"
+ ],
+ "zendesk": [
+  "bamboohr"
  ],
  "zoominfo": [
   "greenhouse"
