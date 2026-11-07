@@ -1,9 +1,9 @@
 name: daily-job-fetch
-# Pulls public job boards + remote job feeds once a day and saves new candidates to data/.
-# Scoring and resume tailoring happen afterwards in Claude; nothing personal lives in this repo.
+# Pulls company career boards (Greenhouse, Lever, Ashby, SmartRecruiters, Rippling, Workable, BambooHR)
+# and remote job feeds once a day and saves new candidates to data/. Nothing personal lives in this repo.
 on:
   schedule:
-    - cron: "30 10 * * *"   # 4:30am CST / 5:30am CDT, well before the 6:36am Claude run
+    - cron: "30 10 * * *"   # 4:30am CST / 5:30am CDT, before the 6:36am Claude run
   workflow_dispatch: {}
 permissions:
   contents: write
@@ -13,7 +13,7 @@ concurrency:
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -34,7 +34,7 @@ jobs:
           import xml.etree.ElementTree as ET
 
           ROOT = pathlib.Path.cwd()
-          CFG = json.loads(r"""{"min_salary": 70000, "max_age_days": 10, "title_include": ["customer success", "client success", "customer experience", "client experience", "guest experience", "member experience", "owner experience", "owner success", "homeowner", "partner success", "customer operations", "support operations", "cx operations", "service delivery", "implementation", "onboarding", "customer onboarding", "account manager", "relationship manager", "portfolio manager", "property operations", "business operations", "operations manager", "hospitality", "customer support manager", "head of customer", "director of customer", "director, customer", "customer care manager", "guest services", "regional operations", "field operations", "solutions manager", "engagement manager", "customer enablement", "partner manager"], "title_exclude": ["engineer", "developer", "scientist", "designer", "intern", "account executive", "sales development", "sdr", "bdr", "recruit", "counsel", "attorney", "accountant", "payroll", "nurse", "physician", "clinical", "pharmac", "teacher", "tutor", "driver", "technician", "associate", "coordinator", "representative", "agent", "specialist i", "entry level", "junior", "jr.", "part-time", "part time", "contract", "temporary", "seasonal", "investment", "portfolio management analyst", "wealth", "trader", "fund", "credit", "loan", "mortgage", "insurance agent", "data ", "analytics engineer", "security", "devops", "marketing manager", "brand", "product manager", "program manager, engineering"], "non_us_markers": ["canada", "toronto", "vancouver", "montreal", "united kingdom", " uk", "london", "england", "ireland", "dublin", "germany", "berlin", "munich", "france", "paris", "spain", "madrid", "barcelona", "portugal", "lisbon", "netherlands", "amsterdam", "poland", "warsaw", "romania", "serbia", "belgrade", "croatia", "italy", "milan", "europe", "emea", "apac", "latam", "india", "bangalore", "bengaluru", "philippines", "manila", "australia", "sydney", "melbourne", "new zealand", "singapore", "japan", "tokyo", "brazil", "s\u00e3o paulo", "sao paulo", "mexico", "argentina", "colombia", "chile", "israel", "tel aviv", "south africa", "uae", "dubai", "czech", "prague", "sweden", "stockholm", "denmark", "norway", "finland", "switzerland", "austria", "belgium", "greece", "turkey", "ukraine", "estonia", "lithuania", "latvia", "hungary", "bulgaria"], "companies": ["cloudbeds", "mews", "siteminder", "canarytechnologies", "duve", "hostaway", "guesty", "breezeway", "vacasa", "evolvevacationrental", "airbnb", "hopper", "navan", "turo", "sonder", "hostfully", "ownerrez", "lodgify", "pricelabs", "wheelhouse", "beyondpricing", "kasa", "minthouse", "placemakr", "mylighthouse", "revinate", "actabl", "hotelengine", "stayntouch", "agilysys", "apaleo", "oaky", "nuitee", "inspirato", "pacaso", "arrived", "hellolanding", "blueground", "mindtrip", "getyourguide", "tripadvisor", "viator", "sevenrooms", "toast", "olo", "7shifts", "homebase", "mindbody", "vagaro", "podium", "birdeye", "yext", "entrata", "appfolio", "doorloop", "smartrent", "latch", "butterflymx", "mynd", "roofstock", "rentredi", "gainsight", "intercom", "zendesk", "gorgias", "kustomer", "frontapp", "dialpad", "aircall", "sprinklr", "gusto", "rippling", "deel", "remotecom", "lattice", "cultureamp", "gong", "zapier", "gitlab", "automattic", "buffer", "doist", "hotjar", "calendly", "airtable", "asana", "clickup", "procore", "servicetitan", "jobber", "housecallpro", "workiz", "squarespace", "klaviyo", "attentive", "braze", "iterable", "amplitude", "mixpanel", "samsara", "gomotive", "fleetio", "affirm", "brex", "ramp", "mercury", "plaid", "chime", "carta", "vanta", "drata", "1password", "webflow", "canva", "figma", "notion", "loom", "miro", "hubspot", "veeva", "benchling", "flywire", "spothero", "parkmobile", "wework", "industrious", "convene", "liquidspace", "eventbrite", "cvent", "bizzabo", "hopin", "zoominfo", "outreach", "salesloft", "highspot", "seismic", "showpad", "docusign", "pandadoc", "dropbox", "smartsheet", "wrike", "teamwork", "thumbtack", "angi", "taskrabbit", "rover", "wag", "veho", "instawork", "shiftsmart", "wonolo", "upwork", "fiverr", "toptal", "mondaycom", "boxinc", "ownercom"]}""")
+          CFG = json.loads(r"""{"min_salary": 70000, "max_age_days": 10, "title_include": ["customer success", "client success", "customer experience", "client experience", "guest experience", "member experience", "owner experience", "owner success", "homeowner", "partner success", "customer operations", "support operations", "cx operations", "service delivery", "implementation", "onboarding", "customer onboarding", "account manager", "relationship manager", "portfolio manager", "property operations", "business operations", "operations manager", "hospitality", "customer support manager", "head of customer", "director of customer", "director, customer", "customer care manager", "guest services", "regional operations", "field operations", "solutions manager", "engagement manager", "customer enablement", "partner manager", "customer growth", "customer recovery", "customer support", "owner relations", "owner retention", "homeowner success", "guest relations", "host success", "host experience", "partner experience", "property success", "hospitality operations", "client services manager", "service excellence", "experience manager"], "title_exclude": ["engineer", "developer", "scientist", "designer", "intern", "account executive", "sales development", "sdr", "bdr", "recruit", "counsel", "attorney", "accountant", "payroll", "nurse", "physician", "clinical", "pharmac", "teacher", "tutor", "driver", "technician", "coordinator", "representative", "agent", "specialist i", "entry level", "junior", "jr.", "part-time", "part time", "contract", "temporary", "seasonal", "investment", "portfolio management analyst", "wealth", "trader", "fund", "credit", "loan", "mortgage", "insurance agent", "data ", "analytics engineer", "security", "devops", "marketing manager", "brand", "product manager", "program manager, engineering", "associate account", "associate customer", "associate,"], "non_us_markers": ["canada", "toronto", "vancouver", "montreal", "united kingdom", " uk", "london", "england", "ireland", "dublin", "germany", "berlin", "munich", "france", "paris", "spain", "madrid", "barcelona", "portugal", "lisbon", "netherlands", "amsterdam", "poland", "warsaw", "romania", "serbia", "belgrade", "croatia", "italy", "milan", "europe", "emea", "apac", "latam", "india", "bangalore", "bengaluru", "philippines", "manila", "australia", "sydney", "melbourne", "new zealand", "singapore", "japan", "tokyo", "brazil", "s\u00e3o paulo", "sao paulo", "mexico", "argentina", "colombia", "chile", "israel", "tel aviv", "south africa", "uae", "dubai", "czech", "prague", "sweden", "stockholm", "denmark", "norway", "finland", "switzerland", "austria", "belgium", "greece", "turkey", "ukraine", "estonia", "lithuania", "latvia", "hungary", "bulgaria"], "companies": ["cloudbeds", "mews", "siteminder", "canarytechnologies", "duve", "hostaway", "guesty", "breezeway", "vacasa", "evolvevacationrental", "airbnb", "hopper", "navan", "turo", "sonder", "hostfully", "ownerrez", "lodgify", "pricelabs", "wheelhouse", "beyondpricing", "kasa", "minthouse", "placemakr", "mylighthouse", "revinate", "actabl", "hotelengine", "stayntouch", "agilysys", "apaleo", "oaky", "nuitee", "inspirato", "pacaso", "arrived", "hellolanding", "blueground", "mindtrip", "getyourguide", "tripadvisor", "viator", "sevenrooms", "toast", "olo", "7shifts", "homebase", "mindbody", "vagaro", "podium", "birdeye", "yext", "entrata", "appfolio", "doorloop", "smartrent", "latch", "butterflymx", "mynd", "roofstock", "rentredi", "gainsight", "intercom", "zendesk", "gorgias", "kustomer", "frontapp", "dialpad", "aircall", "sprinklr", "gusto", "rippling", "deel", "remotecom", "lattice", "cultureamp", "gong", "zapier", "gitlab", "automattic", "buffer", "doist", "hotjar", "calendly", "airtable", "asana", "clickup", "procore", "servicetitan", "jobber", "housecallpro", "workiz", "squarespace", "klaviyo", "attentive", "braze", "iterable", "amplitude", "mixpanel", "samsara", "gomotive", "fleetio", "affirm", "brex", "ramp", "mercury", "plaid", "chime", "carta", "vanta", "drata", "1password", "webflow", "canva", "figma", "notion", "loom", "miro", "hubspot", "veeva", "benchling", "flywire", "spothero", "parkmobile", "wework", "industrious", "convene", "liquidspace", "eventbrite", "cvent", "bizzabo", "hopin", "zoominfo", "outreach", "salesloft", "highspot", "seismic", "showpad", "docusign", "pandadoc", "dropbox", "smartsheet", "wrike", "teamwork", "thumbtack", "angi", "taskrabbit", "rover", "wag", "veho", "instawork", "shiftsmart", "wonolo", "upwork", "fiverr", "toptal", "mondaycom", "boxinc", "ownercom", "cloudbedsthirdpartyboard", "mewssystems", "duetto", "duettocloud", "cendyn", "hospitable", "turno", "avantstay", "casago", "operto", "ensoconnect", "suiteop", "akia", "whistle", "trustyou", "hotelkey", "roompricegenie", "selina", "lifehouse", "zeusliving", "awaytravel", "hotelplanner", "furnishedfinder", "staysense", "alicehospitality", "hotsos", "kipsu", "medallia", "sabre", "amadeus", "shiji", "infor", "oraclehospitality", "marriottvacations", "travelandleisureco", "hilton", "hyatt", "ihg"], "priority_max_age_days": 30, "priority_companies": ["actabl", "agilysys", "airbnb", "akia", "alicehospitality", "amadeus", "apaleo", "avantstay", "awaytravel", "beyondpricing", "blueground", "breezeway", "canarytechnologies", "casago", "cendyn", "cloudbeds", "cloudbedsthirdpartyboard", "duetto", "duettocloud", "duve", "ensoconnect", "evolvevacationrental", "furnishedfinder", "getyourguide", "guesty", "hilton", "hopper", "hospitable", "hostaway", "hostfully", "hotelengine", "hotelkey", "hotelplanner", "hotsos", "hyatt", "ihg", "infor", "inspirato", "kasa", "kipsu", "lifehouse", "lodgify", "marriottvacations", "medallia", "mews", "mewssystems", "mindtrip", "minthouse", "mylighthouse", "navan", "nuitee", "oaky", "olo", "operto", "oraclehospitality", "ownerrez", "pacaso", "placemakr", "pricelabs", "rentredi", "revinate", "roompricegenie", "sabre", "selina", "sevenrooms", "shiji", "siteminder", "sonder", "spothero", "stayntouch", "staysense", "suiteop", "toast", "travelandleisureco", "tripadvisor", "trustyou", "turno", "turo", "vacasa", "viator", "wheelhouse", "whistle", "zeusliving"], "fully_remote_companies": ["cloudbeds", "cloudbedsthirdpartyboard", "breezeway", "evolvevacationrental", "hostaway", "gitlab", "automattic", "zapier", "doist", "buffer", "hospitable", "turno", "operto", "pricelabs", "hostfully", "ownerrez", "duve", "canarytechnologies"]}""")
           FEEDBACK = ROOT / "config/feedback.json"   # written by Claude from dashboard feedback (excluded companies/titles, min salary)
           DATA = ROOT / "data"; (DATA / "candidates").mkdir(parents=True, exist_ok=True); (DATA / "runs").mkdir(parents=True, exist_ok=True)
           TODAY = dt.datetime.now(dt.timezone.utc).astimezone(dt.timezone(dt.timedelta(hours=-6))).date()
@@ -138,7 +138,48 @@ jobs:
                                  remote_flag=loc.get("remote"), posted=j.get("releasedDate"), description="", req_id=j["id"], _sr_detail=j.get("ref")))
               return out
 
-          ATS = {"greenhouse": greenhouse, "lever": lever, "ashby": ashby, "smartrecruiters": smartrecruiters}
+          def rippling(slug):
+              d = jget(f"https://ats.rippling.com/api/v2/board/{slug}/jobs?page=0&pageSize=100")
+              items = (d or {}).get("items") if isinstance(d, dict) else None
+              if not items: return None
+              out = []
+              for j in items:
+                  locs = j.get("locations") or []
+                  loc = " / ".join((l.get("name") or "") + " " + (l.get("workplaceType") or "") for l in locs)
+                  out.append(job(source="rippling", company=slug.replace("-careers", ""), title=j.get("name", ""), url=j.get("url"),
+                                 location=loc, remote_flag=any((l.get("workplaceType") or "").upper() == "REMOTE" for l in locs),
+                                 description="", req_id=j.get("id")))
+              return out
+
+          def workable(slug):
+              try:
+                  d = json.loads(get(f"https://apply.workable.com/api/v3/accounts/{slug}/jobs", data=json.dumps({"query": "", "location": [], "department": [], "worktype": [], "remote": []}).encode()))
+              except Exception: return None
+              if not d or not d.get("results"): return None
+              out = []
+              for j in d["results"]:
+                  loc = j.get("location") or {}
+                  out.append(job(source="workable", company=slug, title=j.get("title", ""), url=f'https://apply.workable.com/{slug}/j/{j.get("shortcode")}/',
+                                 location=f'{loc.get("city","")} {loc.get("region","")} {loc.get("country","")} {"remote" if j.get("remote") else ""} {j.get("workplace","")}',
+                                 remote_flag=bool(j.get("remote")) or j.get("workplace") == "remote", posted=j.get("published"),
+                                 description="", req_id=j.get("shortcode"), commitment=j.get("type")))
+              return out
+
+          def bamboohr(slug):
+              d = jget(f"https://{slug}.bamboohr.com/careers/list")
+              if not d or not d.get("result"): return None
+              out = []
+              for j in d["result"]:
+                  loc = j.get("location") or {}; ats = j.get("atsLocation") or {}
+                  out.append(job(source="bamboohr", company=slug, title=j.get("jobOpeningName", ""), url=f'https://{slug}.bamboohr.com/careers/{j.get("id")}',
+                                 location=f'{loc.get("city") or ""} {loc.get("state") or ""} {ats.get("country") or ""} {"remote" if j.get("isRemote") else ""}',
+                                 remote_flag=bool(j.get("isRemote")) or j.get("locationType") == "1", description="", req_id=str(j.get("id")),
+                                 commitment=j.get("employmentStatusLabel")))
+              return out
+
+          ATS = {"greenhouse": greenhouse, "lever": lever, "ashby": ashby, "smartrecruiters": smartrecruiters,
+                 "rippling": lambda s: rippling(s if s.endswith("-careers") else s + "-careers"), "workable": workable, "bamboohr": bamboohr}
+          PRIORITY = set(CFG.get("priority_companies", [])); FULLY_REMOTE = set(CFG.get("fully_remote_companies", []))
 
           # ---------- remote feeds ----------
           def himalayas():
@@ -204,9 +245,14 @@ jobs:
               if j["company"].lower() in EXCL_CO: return "excluded company"
               if not any(k in t for k in CFG["title_include"]): return "title"
               if any(k in t for k in CFG["title_exclude"] + EXCL_TITLE): return "title excluded"
+              if t.startswith("associate ") and not t.startswith("associate director"): return "title excluded"
               if j.get("commitment") and re.search(r"part|contract|intern|temp", str(j["commitment"]), re.I): return "not full-time"
               if re.search(r"hybrid|on-?site|in[- ]office", loc): return "hybrid/onsite"
+              slug = j.get("slug", "")
+              region_only = re.fullmatch(r"[\s;,/|()-]*(?:(?:united states(?: of america)?|usa|us|u\.s\.|north america|americas|canada|latin america|anywhere)[\s;,/|()-]*)+", loc or "") is not None
               remote = j.get("remote_flag") or "remote" in loc or "anywhere" in loc
+              if not remote and (region_only or slug in FULLY_REMOTE) and re.search(r"united states|usa|\bus\b|north america|americas", loc):
+                  remote = True; j["remote_unverified"] = True
               if not remote: return "not remote"
               us = re.search(r"\b(us|usa|u\.s\.|united states|america|north america|anywhere|worldwide)\b", loc)
               if not us and any(m in loc for m in CFG["non_us_markers"]): return "not US"
@@ -218,7 +264,9 @@ jobs:
               top = j.get("salary_max") or j.get("salary_min")
               if top and top < MIN_SAL: return "salary below floor"
               pd = parse_date(j.get("posted"))
-              if pd and (dt.datetime.now(dt.timezone.utc) - pd).days > CFG["max_age_days"]: return "too old"
+              max_age = CFG.get("priority_max_age_days", 30) if slug in PRIORITY else CFG["max_age_days"]
+              if pd and (dt.datetime.now(dt.timezone.utc) - pd).days > max_age: return "too old"
+              j["priority"] = slug in PRIORITY
               return None
 
           def key(j):
@@ -233,15 +281,23 @@ jobs:
               all_jobs = []
 
               # Boards: use known ATS; re-probe unknown slugs on Mondays (or first run)
-              probe_all = not ats_map or TODAY.weekday() == 0
+              tried_p = DATA / "ats_tried.json"
+              tried = json.loads(tried_p.read_text()) if tried_p.exists() else {}
+              probe_all = TODAY.weekday() == 0
               tasks = []
               for slug in CFG["companies"]:
-                  known = ats_map.get(slug)
-                  if known: tasks += [(slug, a) for a in known]
-                  elif probe_all: tasks += [(slug, a) for a in ATS]
+                  known = ats_map.get(slug, [])
+                  tasks += [(slug, a) for a in known]
+                  for a in ATS:
+                      if a not in known and (probe_all or f"{slug}:{a}" not in tried):
+                          tasks.append((slug, a)); tried[f"{slug}:{a}"] = str(TODAY)
+              tried_p.write_text(json.dumps(tried))
               def run(t):
                   slug, a = t
-                  try: return slug, a, ATS[a](slug)
+                  try:
+                      res = ATS[a](slug)
+                      for x in res or []: x["slug"] = slug
+                      return slug, a, res
                   except Exception: return slug, a, None
               new_map = {k: v for k, v in ats_map.items()}
               with cf.ThreadPoolExecutor(12) as ex:
