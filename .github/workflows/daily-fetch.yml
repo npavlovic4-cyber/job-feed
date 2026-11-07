@@ -1,0 +1,291 @@
+name: daily-job-fetch
+# Pulls public job boards + remote job feeds once a day and saves new candidates to data/.
+# Scoring and resume tailoring happen afterwards in Claude; nothing personal lives in this repo.
+on:
+  schedule:
+    - cron: "30 10 * * *"   # 4:30am CST / 5:30am CDT, well before the 6:36am Claude run
+  workflow_dispatch: {}
+permissions:
+  contents: write
+concurrency:
+  group: fetch
+  cancel-in-progress: false
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fetch jobs
+        run: |
+          python - <<'PY'
+          #!/usr/bin/env python3
+          """Daily job discovery. Runs in GitHub Actions (open internet). Standard library only.
+
+          Pulls public job boards (Greenhouse, Lever, Ashby, SmartRecruiters) for the companies in config/search.json,
+          plus remote job feeds (Himalayas, Remotive, RemoteOK, We Work Remotely). Applies the hard filters
+          (title, US-remote, salary floor, age), dedupes against data/seen.json and writes
+          data/candidates/YYYY-MM-DD.json + data/runs/YYYY-MM-DD.json. Scoring happens later, in Claude.
+          """
+          import json, re, html, hashlib, datetime as dt, pathlib, sys, time, urllib.request, urllib.error, urllib.parse, concurrent.futures as cf
+          import xml.etree.ElementTree as ET
+
+          ROOT = pathlib.Path.cwd()
+          CFG = json.loads(r"""{"min_salary": 70000, "max_age_days": 10, "title_include": ["customer success", "client success", "customer experience", "client experience", "guest experience", "member experience", "owner experience", "owner success", "homeowner", "partner success", "customer operations", "support operations", "cx operations", "service delivery", "implementation", "onboarding", "customer onboarding", "account manager", "relationship manager", "portfolio manager", "property operations", "business operations", "operations manager", "hospitality", "customer support manager", "head of customer", "director of customer", "director, customer", "customer care manager", "guest services", "regional operations", "field operations", "solutions manager", "engagement manager", "customer enablement", "partner manager"], "title_exclude": ["engineer", "developer", "scientist", "designer", "intern", "account executive", "sales development", "sdr", "bdr", "recruit", "counsel", "attorney", "accountant", "payroll", "nurse", "physician", "clinical", "pharmac", "teacher", "tutor", "driver", "technician", "associate", "coordinator", "representative", "agent", "specialist i", "entry level", "junior", "jr.", "part-time", "part time", "contract", "temporary", "seasonal", "investment", "portfolio management analyst", "wealth", "trader", "fund", "credit", "loan", "mortgage", "insurance agent", "data ", "analytics engineer", "security", "devops", "marketing manager", "brand", "product manager", "program manager, engineering"], "non_us_markers": ["canada", "toronto", "vancouver", "montreal", "united kingdom", " uk", "london", "england", "ireland", "dublin", "germany", "berlin", "munich", "france", "paris", "spain", "madrid", "barcelona", "portugal", "lisbon", "netherlands", "amsterdam", "poland", "warsaw", "romania", "serbia", "belgrade", "croatia", "italy", "milan", "europe", "emea", "apac", "latam", "india", "bangalore", "bengaluru", "philippines", "manila", "australia", "sydney", "melbourne", "new zealand", "singapore", "japan", "tokyo", "brazil", "s\u00e3o paulo", "sao paulo", "mexico", "argentina", "colombia", "chile", "israel", "tel aviv", "south africa", "uae", "dubai", "czech", "prague", "sweden", "stockholm", "denmark", "norway", "finland", "switzerland", "austria", "belgium", "greece", "turkey", "ukraine", "estonia", "lithuania", "latvia", "hungary", "bulgaria"], "companies": ["cloudbeds", "mews", "siteminder", "canarytechnologies", "duve", "hostaway", "guesty", "breezeway", "vacasa", "evolvevacationrental", "airbnb", "hopper", "navan", "turo", "sonder", "hostfully", "ownerrez", "lodgify", "pricelabs", "wheelhouse", "beyondpricing", "kasa", "minthouse", "placemakr", "mylighthouse", "revinate", "actabl", "hotelengine", "stayntouch", "agilysys", "apaleo", "oaky", "nuitee", "inspirato", "pacaso", "arrived", "hellolanding", "blueground", "mindtrip", "getyourguide", "tripadvisor", "viator", "sevenrooms", "toast", "olo", "7shifts", "homebase", "mindbody", "vagaro", "podium", "birdeye", "yext", "entrata", "appfolio", "doorloop", "smartrent", "latch", "butterflymx", "mynd", "roofstock", "rentredi", "gainsight", "intercom", "zendesk", "gorgias", "kustomer", "frontapp", "dialpad", "aircall", "sprinklr", "gusto", "rippling", "deel", "remotecom", "lattice", "cultureamp", "gong", "zapier", "gitlab", "automattic", "buffer", "doist", "hotjar", "calendly", "airtable", "asana", "clickup", "procore", "servicetitan", "jobber", "housecallpro", "workiz", "squarespace", "klaviyo", "attentive", "braze", "iterable", "amplitude", "mixpanel", "samsara", "gomotive", "fleetio", "affirm", "brex", "ramp", "mercury", "plaid", "chime", "carta", "vanta", "drata", "1password", "webflow", "canva", "figma", "notion", "loom", "miro", "hubspot", "veeva", "benchling", "flywire", "spothero", "parkmobile", "wework", "industrious", "convene", "liquidspace", "eventbrite", "cvent", "bizzabo", "hopin", "zoominfo", "outreach", "salesloft", "highspot", "seismic", "showpad", "docusign", "pandadoc", "dropbox", "smartsheet", "wrike", "teamwork", "thumbtack", "angi", "taskrabbit", "rover", "wag", "veho", "instawork", "shiftsmart", "wonolo", "upwork", "fiverr", "toptal", "mondaycom", "boxinc", "ownercom"]}""")
+          FEEDBACK = ROOT / "config/feedback.json"   # written by Claude from dashboard feedback (excluded companies/titles, min salary)
+          DATA = ROOT / "data"; (DATA / "candidates").mkdir(parents=True, exist_ok=True); (DATA / "runs").mkdir(parents=True, exist_ok=True)
+          TODAY = dt.datetime.now(dt.timezone.utc).astimezone(dt.timezone(dt.timedelta(hours=-6))).date()
+          UA = {"User-Agent": "personal-job-search/1.0 (single user, once daily)", "Accept": "application/json"}
+
+          fb = json.loads(FEEDBACK.read_text()) if FEEDBACK.exists() else {}
+          MIN_SAL = int(fb.get("min_salary", CFG["min_salary"]))
+          EXCL_CO = {c.lower() for c in fb.get("excluded_companies", [])}
+          EXCL_TITLE = [t.lower() for t in fb.get("excluded_titles", [])]
+
+          def get(url, data=None, timeout=25):
+              req = urllib.request.Request(url, data=data, headers=UA)
+              with urllib.request.urlopen(req, timeout=timeout) as r:
+                  return r.read().decode("utf-8", "replace")
+
+          def jget(url):
+              try: return json.loads(get(url))
+              except Exception: return None
+
+          def text(h):
+              h = html.unescape(h or "")
+              h = re.sub(r"<(br|/p|/li|/h\d|/div)[^>]*>", "\n", h, flags=re.I)
+              h = re.sub(r"<[^>]+>", " ", h); h = html.unescape(h)
+              return re.sub(r"[ \t]+", " ", re.sub(r"\n\s*\n+", "\n", h)).strip()
+
+          SAL_RE = re.compile(r"\$\s?(\d{2,3}(?:,\d{3})|\d{2,3}(?:\.\d)?\s?[kK])\s*(?:-|–|—|to)\s*\$?\s?(\d{2,3}(?:,\d{3})|\d{2,3}(?:\.\d)?\s?[kK])")
+          HOURLY_RE = re.compile(r"\$\s?(\d{2,3}(?:\.\d{2})?)\s*(?:-|–|—|to)\s*\$?\s?(\d{2,3}(?:\.\d{2})?)\s*(?:/|per)\s*(?:hr|hour)", re.I)
+          def money(s):
+              s = s.replace(",", "").replace(" ", "")
+              return int(float(s[:-1]) * 1000) if s[-1] in "kK" else int(float(s))
+          def parse_salary(t):
+              m = SAL_RE.search(t or "")
+              if m:
+                  lo, hi = money(m.group(1)), money(m.group(2))
+                  if 20000 <= lo <= 600000 and lo <= hi: return lo, hi, m.group(0)
+              m = HOURLY_RE.search(t or "")
+              if m:
+                  lo, hi = float(m.group(1)) * 2080, float(m.group(2)) * 2080
+                  return int(lo), int(hi), m.group(0)
+              return None, None, None
+
+          def job(**k):
+              k.setdefault("salary_min", None); k.setdefault("salary_max", None); k.setdefault("salary_text", None)
+              k.setdefault("posted", None); k.setdefault("remote_flag", None); k.setdefault("description", "")
+              return k
+
+          # ---------- ATS boards ----------
+          def greenhouse(slug):
+              d = jget(f"https://boards-api.greenhouse.io/v1/boards/{slug}/jobs?content=true")
+              if not d or "jobs" not in d: return None
+              out = []
+              for j in d["jobs"]:
+                  desc = text(j.get("content"))
+                  out.append(job(source="greenhouse", company=(j.get("company_name") or slug), title=j["title"], url=j["absolute_url"],
+                                 location=(j.get("location") or {}).get("name", ""), posted=(j.get("first_published") or j.get("updated_at")),
+                                 description=desc, req_id=str(j.get("requisition_id") or j["id"])))
+              return out
+
+          def lever(slug):
+              d = jget(f"https://api.lever.co/v0/postings/{slug}?mode=json")
+              if not isinstance(d, list): return None
+              out = []
+              for j in d:
+                  cat = j.get("categories") or {}
+                  sr = j.get("salaryRange") or {}
+                  desc = "\n".join([j.get("descriptionPlain") or ""] + [f'{l.get("text","")}\n{text(l.get("content"))}' for l in j.get("lists", [])] + [j.get("additionalPlain") or ""])
+                  out.append(job(source="lever", company=slug, title=j["text"], url=j["hostedUrl"], location=cat.get("location", "") + " " + " ".join(cat.get("allLocations") or []),
+                                 remote_flag=(j.get("workplaceType") == "remote") if j.get("workplaceType") else None,
+                                 posted=dt.datetime.fromtimestamp(j["createdAt"] / 1000, dt.timezone.utc).isoformat() if j.get("createdAt") else None,
+                                 salary_min=sr.get("min") if sr.get("interval", "per-year-salary") == "per-year-salary" else None,
+                                 salary_max=sr.get("max") if sr.get("interval", "per-year-salary") == "per-year-salary" else None,
+                                 description=desc, req_id=j["id"], commitment=cat.get("commitment")))
+              return out
+
+          def ashby(slug):
+              d = jget(f"https://api.ashbyhq.com/posting-api/job-board/{slug}?includeCompensation=true")
+              if not d or "jobs" not in d: return None
+              out = []
+              for j in d["jobs"]:
+                  if j.get("isListed") is False: continue
+                  lo = hi = None; comp = j.get("compensation") or {}
+                  for t in comp.get("summaryComponents") or []:
+                      if t.get("compensationType") == "Salary" and t.get("interval") in (None, "1 YEAR"):
+                          lo, hi = t.get("minValue"), t.get("maxValue")
+                  locs = [j.get("location") or ""] + [s.get("location", "") for s in j.get("secondaryLocations") or []]
+                  addr = ((j.get("address") or {}).get("postalAddress") or {}).get("addressCountry", "")
+                  out.append(job(source="ashby", company=slug, title=j["title"], url=j.get("jobUrl") or j.get("applyUrl"), location=" / ".join(locs) + " " + addr,
+                                 remote_flag=bool(j.get("isRemote")) or j.get("workplaceType") == "Remote", posted=j.get("publishedAt"),
+                                 salary_min=lo, salary_max=hi, salary_text=comp.get("compensationTierSummary"),
+                                 description=j.get("descriptionPlain") or text(j.get("descriptionHtml")), req_id=j.get("id"), commitment=j.get("employmentType")))
+              return out
+
+          def smartrecruiters(slug):
+              d = jget(f"https://api.smartrecruiters.com/v1/companies/{slug}/postings?limit=100")
+              if not d or not d.get("content"): return None
+              out = []
+              for j in d["content"]:
+                  loc = j.get("location") or {}
+                  out.append(job(source="smartrecruiters", company=(j.get("company") or {}).get("name", slug), title=j["name"],
+                                 url=f'https://jobs.smartrecruiters.com/{slug}/{j["id"]}', location=f'{loc.get("city","")} {loc.get("region","")} {loc.get("country","")} {"remote" if loc.get("remote") else ""}',
+                                 remote_flag=loc.get("remote"), posted=j.get("releasedDate"), description="", req_id=j["id"], _sr_detail=j.get("ref")))
+              return out
+
+          ATS = {"greenhouse": greenhouse, "lever": lever, "ashby": ashby, "smartrecruiters": smartrecruiters}
+
+          # ---------- remote feeds ----------
+          def himalayas():
+              out = []
+              for q in ["customer success", "customer experience", "implementation manager", "onboarding manager", "account manager", "operations manager", "client success", "portfolio manager"]:
+                  d = jget("https://himalayas.app/jobs/api/search?" + urllib.parse.urlencode({"q": q, "country": "US", "sort": "recent"}))
+                  for j in (d or {}).get("jobs", []):
+                      out.append(job(source="himalayas", company=j.get("companyName", ""), title=j.get("title", ""), url=j.get("applicationLink") or j.get("guid"),
+                                     location="Remote " + " ".join(j.get("locationRestrictions") or []), remote_flag=True,
+                                     posted=dt.datetime.fromtimestamp(j["pubDate"], dt.timezone.utc).isoformat() if isinstance(j.get("pubDate"), (int, float)) else j.get("pubDate"),
+                                     salary_min=j.get("minSalary") if (j.get("salaryPeriod") in (None, "annual", "year", "yearly")) else None,
+                                     salary_max=j.get("maxSalary") if (j.get("salaryPeriod") in (None, "annual", "year", "yearly")) else None,
+                                     description=text(j.get("description") or j.get("excerpt")), req_id=j.get("guid")))
+                  time.sleep(1)
+              return out
+
+          def remotive():
+              out = []
+              for q in ["customer success", "customer experience", "account manager", "implementation", "operations manager"]:
+                  d = jget("https://remotive.com/api/remote-jobs?" + urllib.parse.urlencode({"search": q, "limit": 100}))
+                  for j in (d or {}).get("jobs", []):
+                      out.append(job(source="remotive", company=j.get("company_name", ""), title=j.get("title", ""), url=j.get("url"),
+                                     location="Remote " + (j.get("candidate_required_location") or ""), remote_flag=True, posted=j.get("publication_date"),
+                                     salary_text=j.get("salary") or None, description=text(j.get("description")), req_id=str(j.get("id"))))
+              return out
+
+          def remoteok():
+              d = jget("https://remoteok.com/api")
+              out = []
+              for j in (d or [])[1:]:
+                  out.append(job(source="remoteok", company=j.get("company", ""), title=j.get("position", ""), url=j.get("url"),
+                                 location="Remote " + (j.get("location") or ""), remote_flag=True, posted=j.get("date"),
+                                 salary_min=j.get("salary_min") or None, salary_max=j.get("salary_max") or None,
+                                 description=text(j.get("description")), req_id=str(j.get("id"))))
+              return out
+
+          def wwr():
+              out = []
+              for cat in ["remote-customer-support-jobs", "remote-management-and-finance-jobs", "all-other-remote-jobs"]:
+                  try: root = ET.fromstring(get(f"https://weworkremotely.com/categories/{cat}.rss"))
+                  except Exception: continue
+                  for it in root.iter("item"):
+                      t = it.findtext("title") or ""; co, _, title = t.partition(": ")
+                      out.append(job(source="weworkremotely", company=co, title=title or t, url=it.findtext("link"),
+                                     location="Remote " + (it.findtext("region") or ""), remote_flag=True, posted=it.findtext("pubDate"),
+                                     description=text(it.findtext("description")), req_id=it.findtext("guid")))
+              return out
+
+          FEEDS = {"himalayas": himalayas, "remotive": remotive, "remoteok": remoteok, "weworkremotely": wwr}
+
+          # ---------- filters ----------
+          def parse_date(s):
+              if not s: return None
+              for f in (lambda x: dt.datetime.fromisoformat(x.replace("Z", "+00:00")), lambda x: dt.datetime.strptime(x, "%a, %d %b %Y %H:%M:%S %z")):
+                  try:
+                      d = f(s); return d if d.tzinfo else d.replace(tzinfo=dt.timezone.utc)
+                  except Exception: pass
+              return None
+
+          def check(j):
+              t = j["title"].lower(); loc = (j.get("location") or "").lower(); desc = (j.get("description") or "")
+              if not j.get("url"): return "no url"
+              if j["company"].lower() in EXCL_CO: return "excluded company"
+              if not any(k in t for k in CFG["title_include"]): return "title"
+              if any(k in t for k in CFG["title_exclude"] + EXCL_TITLE): return "title excluded"
+              if j.get("commitment") and re.search(r"part|contract|intern|temp", str(j["commitment"]), re.I): return "not full-time"
+              if re.search(r"hybrid|on-?site|in[- ]office", loc): return "hybrid/onsite"
+              remote = j.get("remote_flag") or "remote" in loc or "anywhere" in loc
+              if not remote: return "not remote"
+              us = re.search(r"\b(us|usa|u\.s\.|united states|america|north america|anywhere|worldwide)\b", loc)
+              if not us and any(m in loc for m in CFG["non_us_markers"]): return "not US"
+              if j.get("salary_min") is None:
+                  lo, hi, st = parse_salary(j.get("salary_text") or "") if j.get("salary_text") else (None, None, None)
+                  if lo is None: lo, hi, st = parse_salary(desc)
+                  j["salary_min"], j["salary_max"] = lo, hi
+                  j["salary_text"] = j.get("salary_text") or st
+              top = j.get("salary_max") or j.get("salary_min")
+              if top and top < MIN_SAL: return "salary below floor"
+              pd = parse_date(j.get("posted"))
+              if pd and (dt.datetime.now(dt.timezone.utc) - pd).days > CFG["max_age_days"]: return "too old"
+              return None
+
+          def key(j):
+              norm = lambda s: re.sub(r"[^a-z0-9]", "", (s or "").lower())
+              return hashlib.sha1(f'{norm(j["company"])}|{norm(j["title"])}'.encode()).hexdigest()[:16]
+
+          def main():
+              ats_map_p = DATA / "ats_map.json"
+              ats_map = json.loads(ats_map_p.read_text()) if ats_map_p.exists() else {}
+              seen_p = DATA / "seen.json"; seen = json.loads(seen_p.read_text()) if seen_p.exists() else {}
+              stats = {"date": str(TODAY), "sources": {}, "rejected": {}, "boards_found": 0}
+              all_jobs = []
+
+              # Boards: use known ATS; re-probe unknown slugs on Mondays (or first run)
+              probe_all = not ats_map or TODAY.weekday() == 0
+              tasks = []
+              for slug in CFG["companies"]:
+                  known = ats_map.get(slug)
+                  if known: tasks += [(slug, a) for a in known]
+                  elif probe_all: tasks += [(slug, a) for a in ATS]
+              def run(t):
+                  slug, a = t
+                  try: return slug, a, ATS[a](slug)
+                  except Exception: return slug, a, None
+              new_map = {k: v for k, v in ats_map.items()}
+              with cf.ThreadPoolExecutor(12) as ex:
+                  for slug, a, res in ex.map(run, tasks):
+                      if res is None: continue
+                      new_map.setdefault(slug, [])
+                      if a not in new_map[slug]: new_map[slug].append(a)
+                      all_jobs += res; stats["sources"][a] = stats["sources"].get(a, 0) + len(res)
+              stats["boards_found"] = sum(len(v) for v in new_map.values())
+              ats_map_p.write_text(json.dumps(new_map, indent=1, sort_keys=True))
+
+              for name, fn in FEEDS.items():
+                  try: res = fn()
+                  except Exception as e: res = []; stats.setdefault("errors", {})[name] = str(e)[:200]
+                  all_jobs += res; stats["sources"][name] = len(res)
+
+              stats["discovered"] = len(all_jobs)
+              cands, keys_today = [], set()
+              for j in all_jobs:
+                  why = check(j)
+                  if why: stats["rejected"][why] = stats["rejected"].get(why, 0) + 1; continue
+                  k = key(j)
+                  if k in seen or k in keys_today: stats["rejected"]["duplicate/seen"] = stats["rejected"].get("duplicate/seen", 0) + 1; continue
+                  keys_today.add(k)
+                  j["id"] = k; j["description"] = (j.get("description") or "")[:6000]
+                  j.pop("_sr_detail", None)
+                  cands.append(j)
+              for k in keys_today: seen[k] = str(TODAY)
+              cutoff = str(TODAY - dt.timedelta(days=75)); seen = {k: v for k, v in seen.items() if v >= cutoff}
+              seen_p.write_text(json.dumps(seen))
+              stats["candidates"] = len(cands)
+              (DATA / "candidates" / f"{TODAY}.json").write_text(json.dumps(cands, indent=1, ensure_ascii=False))
+              (DATA / "runs" / f"{TODAY}.json").write_text(json.dumps(stats, indent=1))
+              (DATA / "latest.json").write_text(json.dumps({"date": str(TODAY), "candidates": len(cands)}))
+              print(json.dumps(stats, indent=1))
+
+          if __name__ == "__main__":
+
+              main()
+          PY
+      - name: Save results
+        run: |
+          git config user.name "job-feed-bot"
+          git config user.email "job-feed-bot@users.noreply.github.com"
+          git add data
+          git diff --cached --quiet || git commit -m "fetch $(date -u +%F)"
+          git push
