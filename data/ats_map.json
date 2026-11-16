@@ -131,7 +131,8 @@
   "smartrecruiters"
  ],
  "getyourguide": [
-  "greenhouse"
+  "greenhouse",
+  "ashby"
  ],
  "gitlab": [
   "greenhouse"
@@ -210,7 +211,8 @@
   "greenhouse"
  ],
  "mindbody": [
-  "greenhouse"
+  "greenhouse",
+  "ashby"
  ],
  "miro": [
   "ashby"
@@ -333,6 +335,9 @@
  ],
  "veeva": [
   "lever"
+ ],
+ "veho": [
+  "bamboohr"
  ],
  "webflow": [
   "greenhouse",
