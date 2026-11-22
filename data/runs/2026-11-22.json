@@ -1,0 +1,28 @@
+{
+ "date": "2026-11-22",
+ "sources": {
+  "greenhouse": 4008,
+  "ashby": 1385,
+  "smartrecruiters": 58,
+  "lever": 1009,
+  "bamboohr": 23,
+  "himalayas": 247,
+  "remotive": 112,
+  "remoteok": 100,
+  "weworkremotely": 258
+ },
+ "rejected": {
+  "not remote": 401,
+  "title": 6208,
+  "too old": 186,
+  "not US": 111,
+  "duplicate/seen": 96,
+  "title excluded": 116,
+  "salary below floor": 8,
+  "hybrid/onsite": 19,
+  "not full-time": 1
+ },
+ "boards_found": 132,
+ "discovered": 7200,
+ "candidates": 54
+}
